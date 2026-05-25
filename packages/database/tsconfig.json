@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2021",
+    "declaration": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./dev.db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SENTRY_DSN=mock-sentry-dsn
+    depends_on:
+      - redis
+    restart: always
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - api
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:

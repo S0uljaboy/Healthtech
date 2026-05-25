@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  schools   School[]
+  users     User[]
+  students  Student[]
+}
+
+model School {
+  id         String      @id @default(uuid())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  name       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  students   Student[]
+  classrooms Classroom[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  email     String   @unique
+  name      String
+  role      String // admin, psychologist, teacher, parent
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assessmentSessions AssessmentSession[]
+  referralsCreated   Referral[]          @relation("ReferralsCreated")
+  referralsReviewed  Referral[]          @relation("ReferralsReviewed")
+  sentMessages       Message[]           @relation("SentMessages")
+  receivedMessages   Message[]           @relation("ReceivedMessages")
+  notifications      Notification[]      @relation("UserNotifications")
+  meetingsOrganized  Meeting[]           @relation("MeetingsOrganized")
+  meetingsParticipated Meeting[]         @relation("MeetingsParticipated")
+  aiAuditsReviewed   AiAuditLog[]
+  consentsGranted    Consent[]
+  auditLogs          AuditLog[]
+}
+
+model Classroom {
+  id        String    @id @default(uuid())
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id])
+  name      String
+  students  Student[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Student {
+  id          String     @id @default(uuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  schoolId    String
+  school      School     @relation(fields: [schoolId], references: [id])
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id])
+
+  fullName  String
+  birthDate DateTime?
+  gender    String?
+
+  status    String @default("ACTIVE")
+  riskLevel String @default("NEUTRAL") // critical, high, medium, low, neutral
+
+  notes String?
+  tags  String // Array of strings (PostgreSQL only)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  observations       Observation[]
+  assessmentSessions AssessmentSession[]
+  referrals          Referral[]
+  messages           Message[]
+  meetings           Meeting[]
+  aiAuditLogs        AiAuditLog[]
+  consents           Consent[]
+}
+
+model BehaviorCategory {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  observations ObservationCategory[]
+}
+
+model Observation {
+  id        String  @id @default(uuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  intensity   String // low, moderate, high, critical
+  frequency   String // once, sometimes, frequent
+  context     String?
+  description String
+  tags        String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories ObservationCategory[]
+}
+
+model ObservationCategory {
+  observationId String
+  categoryId    String
+  observation   Observation      @relation(fields: [observationId], references: [id])
+  category      BehaviorCategory @relation(fields: [categoryId], references: [id])
+
+  @@id([observationId, categoryId])
+}
+
+// ==========================================
+// SPRINT 4: ASSESSMENTS & REFERRALS
+// ==========================================
+
+model AssessmentTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  category    String
+  description String?
+  ageRange    String?
+  version     String  @default("1.0")
+  metadata    String?
+  isActive    Boolean @default(true)
+
+  questions AssessmentQuestion[]
+  sessions  AssessmentSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AssessmentQuestion {
+  id         String             @id @default(uuid())
+  templateId String
+  template   AssessmentTemplate @relation(fields: [templateId], references: [id])
+
+  question String
+  type     String // select, text, multi-select
+  options  String // array of options
+  weight   Float  @default(1.0)
+  order    Int
+
+  answers AssessmentAnswer[]
+}
+
+model AssessmentSession {
+  id             String             @id @default(uuid())
+  studentId      String
+  student        Student            @relation(fields: [studentId], references: [id])
+  psychologistId String
+  psychologist   User               @relation(fields: [psychologistId], references: [id])
+  templateId     String
+  template       AssessmentTemplate @relation(fields: [templateId], references: [id])
+
+  status    String // PENDING, IN_PROGRESS, COMPLETED
+  score     Float?
+  riskLevel String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  answers AssessmentAnswer[]
+}
+
+model AssessmentAnswer {
+  id         String             @id @default(uuid())
+  sessionId  String
+  session    AssessmentSession  @relation(fields: [sessionId], references: [id])
+  questionId String
+  question   AssessmentQuestion @relation(fields: [questionId], references: [id])
+
+  answer String
+  score  Float?
+
+  createdAt DateTime @default(now())
+}
+
+model Referral {
+  id             String  @id @default(uuid())
+  studentId      String
+  student        Student @relation(fields: [studentId], references: [id])
+  teacherId      String
+  teacher        User    @relation("ReferralsCreated", fields: [teacherId], references: [id])
+  psychologistId String?
+  psychologist   User?   @relation("ReferralsReviewed", fields: [psychologistId], references: [id])
+
+  status String // PENDING, UNDER_REVIEW, ASSESSMENT_REQUIRED, MONITORING, CLOSED
+  reason String
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  recipientId String
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  studentId   String?
+  student     Student? @relation(fields: [studentId], references: [id])
+  subject     String
+  body        String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserNotifications", fields: [userId], references: [id])
+  title       String
+  message     String
+  type        String   // "alert", "message", "info"
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Meeting {
+  id           String   @id @default(cuid())
+  organizerId  String
+  organizer    User     @relation("MeetingsOrganized", fields: [organizerId], references: [id])
+  participantId String
+  participant  User     @relation("MeetingsParticipated", fields: [participantId], references: [id])
+  studentId    String?
+  student      Student? @relation(fields: [studentId], references: [id])
+  
+  title        String
+  description  String?
+  scheduledFor DateTime
+  status       String   // SCHEDULED, COMPLETED, CANCELLED
+  link         String?  // Video meeting link
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AiAuditLog {
+  id           String   @id @default(cuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  reviewerId   String?
+  reviewer     User?    @relation(fields: [reviewerId], references: [id])
+  
+  action       String   // "risk_prediction", "semantic_tagging", "behavioral_trend"
+  prompt       String
+  result       String
+  confidence   Float
+  override     Boolean  @default(false)
+  
+  createdAt    DateTime @default(now())
+}
+
+model Consent {
+  id           String   @id @default(cuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  grantedById  String
+  grantedBy    User     @relation(fields: [grantedById], references: [id])
+  
+  type         String   // "DATA_PROCESSING", "CLINICAL_ANALYSIS", "DATA_EXPORT"
+  status       String   // "GRANTED", "REVOKED"
+  ipAddress    String?
+  userAgent    String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  action       String   // "LOGIN", "VIEW_CLINICAL_DATA", "EXPORT_DATA", "UPDATE_CONSENT"
+  resource     String   // "STUDENT_PROFILE", "ASSESSMENT", "REPORT"
+  resourceId   String?  // ID of the specific resource accessed
+  details      String?  // JSON string
+  ipAddress    String?
+  
+  createdAt    DateTime @default(now())
+}

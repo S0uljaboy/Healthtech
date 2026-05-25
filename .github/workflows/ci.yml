@@ -1,0 +1,60 @@
+name: Enterprise Healthtech CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 9
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate Prisma Client
+      run: pnpm run generate
+      working-directory: packages/database
+
+    - name: Lint workspace
+      run: pnpm run lint
+
+    - name: Build API
+      run: pnpm run build
+      working-directory: apps/api
+
+    - name: Build Web
+      run: pnpm run build
+      working-directory: apps/web
+
+    - name: Run Tests
+      run: pnpm run test
+      
+  docker-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build API Image
+        run: docker build -t healthtech-api:latest -f apps/api/Dockerfile .
+      - name: Build Web Image
+        run: docker build -t healthtech-web:latest -f apps/web/Dockerfile .

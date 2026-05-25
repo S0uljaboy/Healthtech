@@ -1,0 +1,9 @@
+{
+  "name": "@healthtech/types",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "lint": "eslint \"**/*.ts*\""
+  },
+  "dependencies": {}
+}
