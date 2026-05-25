@@ -5,3 +5,19 @@
 ▲ Next.js 16.2.6 (Turbopack)
 
   Creating an optimized production build ...
+✓ Compiled successfully in 7.9s
+  Running TypeScript ...
+Failed to type check.
+
+./next.config.ts:2:25
+Type error: Could not find a declaration file for module 'next-pwa'. 'C:/Users/User/.gemini/antigravity/scratch/healthtech_saas/node_modules/.pnpm/next-pwa@5.6.0_@babel+core@7.29.0_@types+babel__core@7.20.5_next@16.2.6_@babel+core@7.29.0_@o_7nlwgwm7ll3s3knh56lqjhl7ly/node_modules/next-pwa/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/next-pwa` if it exists or add a new declaration (.d.ts) file containing `declare module 'next-pwa';`
+
+  [90m1 |[0m [36mimport[0m [36mtype[0m { [33mNextConfig[0m } [36mfrom[0m [32m"next"[0m;
+[31m[1m>[0m [90m2 |[0m [36mimport[0m withPWAInit [36mfrom[0m [32m"next-pwa"[0m;
+  [90m  |[0m                         [31m[1m^[0m
+  [90m3 |[0m
+  [90m4 |[0m [36mconst[0m withPWA = withPWAInit({
+  [90m5 |[0m   dest: [32m"public"[0m,
+Next.js build worker exited with code: 1 and signal: null
+ ELIFECYCLE  Command failed with exit code 1.

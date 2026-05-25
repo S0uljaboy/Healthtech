@@ -38,4 +38,4 @@ COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 WORKDIR /app/apps/api
 EXPOSE 3001
 
-CMD ["sh", "-c", "cd /app/packages/database && npx prisma db push && cd /app/apps/api && node dist/main.js"]
+CMD ["node", "dist/main.js"]
